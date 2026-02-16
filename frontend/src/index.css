@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1152d4;
+  --color-background-light: #f6f6f8;
+  --color-background-dark: #101622;
+  --color-corporate-navy: #0a192f;
+
+  --font-display: "Public Sans", sans-serif;
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+/* Custom Utilities if needed, though v4 handles most via theme */
+body {
+  @apply bg-background-light text-slate-900 antialiased;
+}
+
+.dark body {
+  @apply bg-background-dark text-white;
+}
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

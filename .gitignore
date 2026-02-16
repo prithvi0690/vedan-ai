@@ -68,3 +68,7 @@ htmlcov/
 *.tmp
 *.temp
 .cache/
+
+# Archives
+data_archive/
+scripts_archive/

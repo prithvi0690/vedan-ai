@@ -5,7 +5,7 @@ langchain
 langchain-community
 langchain-huggingface
 langchain-google-genai
-chromadb
-pypdf
+# chromadb (Local only)
+# pypdf (Local ingestion only)
 sentence-transformers
-watchdog
+supabase
