@@ -72,15 +72,14 @@ class StatsResponse(BaseModel):
 rag_engine: Optional[SupabaseRAGEngine] = None
 
 
-@app.on_event("startup")
-async def startup_event():
+def get_engine() -> SupabaseRAGEngine:
+    """Lazy-load the RAG engine on first request (avoids Render port timeout)."""
     global rag_engine
-    try:
+    if rag_engine is None:
+        print("First request — initializing RAG engine...", flush=True)
         rag_engine = SupabaseRAGEngine()
-        print("API ready to serve requests!", flush=True)
-    except Exception as e:
-        print(f"Error initializing RAG engine: {e}", flush=True)
-        raise
+        print("RAG engine ready!", flush=True)
+    return rag_engine
 
 
 # ──────────────────────────────────────────────────────────────
@@ -93,31 +92,30 @@ async def root():
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
-    if rag_engine is None:
-        raise HTTPException(status_code=503, detail="RAG engine not initialized")
-    return {"status": "healthy", "message": "RAG system is operational"}
+    try:
+        get_engine()
+        return {"status": "healthy", "message": "RAG system is operational"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"RAG engine not ready: {str(e)}")
 
 
 @app.get("/stats", response_model=StatsResponse, tags=["Stats"])
 async def get_stats():
-    if rag_engine is None:
-        raise HTTPException(status_code=503, detail="RAG engine not initialized")
     try:
-        return rag_engine.get_stats()
+        engine = get_engine()
+        return engine.get_stats()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
 
 
 @app.post("/query", response_model=QueryResponse, tags=["Query"])
 async def query(request: QueryRequest):
-    if rag_engine is None:
-        raise HTTPException(status_code=503, detail="RAG engine not initialized")
-
     if not request.question or not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
     try:
-        result = rag_engine.query(request.question, k=request.k)
+        engine = get_engine()
+        result = engine.query(request.question, k=request.k)
         return {
             "question": request.question,
             "answer": result["answer"],
