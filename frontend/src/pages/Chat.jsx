@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const Chat = () => {
     const location = useLocation();
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const chatContainerRef = useRef(null);
 
     // If navigated from Home with a query, auto-send it
@@ -22,18 +25,10 @@ const Chat = () => {
             };
             setMessages([userMsg]);
 
-            // Simulate AI response (placeholder for backend)
-            setTimeout(() => {
-                const aiMsg = {
-                    id: Date.now() + 1,
-                    type: 'ai',
-                    text: "I'm connected and ready. Once the backend is integrated, I'll provide real-time legal citations from official PDF sources here.",
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                };
-                setMessages(prev => [...prev, aiMsg]);
-            }, 1000);
+            // Directly call handleSend with the query
+            handleSend(null, query); // Pass null for event, and the query
         }
-    }, []);
+    }, []); // Empty dependency array to run only once on mount
 
     // Auto-scroll to bottom when messages change
     useEffect(() => {
@@ -42,30 +37,58 @@ const Chat = () => {
         }
     }, [messages]);
 
-    const handleSend = (e) => {
+    const handleSend = async (e, initialQuery = null) => {
         if (e) e.preventDefault();
-        if (!input.trim()) return;
+        const question = initialQuery || input.trim();
 
+        if (!question || isLoading) return;
+
+        // Add user message
         const userMsg = {
             id: Date.now(),
             type: 'user',
-            text: input,
+            text: question,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
         setMessages(prev => [...prev, userMsg]);
-        setInput('');
+        if (!initialQuery) { // Only clear input if it's not an initial query
+            setInput('');
+        }
+        setIsLoading(true);
 
-        // Simulate AI response (placeholder for backend)
-        setTimeout(() => {
+        try {
+            const response = await fetch(`${API_URL}/query`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question, k: 10 }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
             const aiMsg = {
                 id: Date.now() + 1,
                 type: 'ai',
-                text: "I'm connected and ready. Once the backend is integrated, I'll provide real-time legal citations from official PDF sources here.",
+                text: data.answer,
+                sources: data.sources,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
             setMessages(prev => [...prev, aiMsg]);
-        }, 1000);
+        } catch (error) {
+            const errorMsg = {
+                id: Date.now() + 1,
+                type: 'ai',
+                text: `Sorry, I encountered an error: ${error.message}. Please try again.`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            setMessages(prev => [...prev, errorMsg]);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

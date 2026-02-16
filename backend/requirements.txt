@@ -1,11 +1,7 @@
 fastapi
 uvicorn
 python-dotenv
-langchain
-langchain-community
-langchain-huggingface
-langchain-google-genai
-# chromadb (Local only)
-# pypdf (Local ingestion only)
 sentence-transformers
+google-generativeai
 supabase
+requests
