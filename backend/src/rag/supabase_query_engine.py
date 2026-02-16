@@ -2,7 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
-import google.generativeai as genai
+from google import genai
 
 load_dotenv()
 
@@ -35,8 +35,8 @@ class SupabaseRAGEngine:
         if not api_key:
             raise ValueError("GOOGLE_API_KEY must be set in .env")
 
-        genai.configure(api_key=api_key)
-        self.llm = genai.GenerativeModel("gemini-2.5-flash")
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = "gemini-2.5-flash"
 
         print("Supabase RAG engine ready!", flush=True)
 
@@ -106,7 +106,10 @@ Question: {question}
 
 Answer with citations:"""
 
-        response = self.llm.generate_content(prompt)
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+        )
         answer = response.text
 
         # Format sources for the frontend
