@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 # Ensure the project root is on sys.path so we can import src.rag.*
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from src.rag.supabase_query_engine import SupabaseRAGEngine
-
 load_dotenv()
 
 # ──────────────────────────────────────────────────────────────
@@ -67,16 +65,23 @@ class StatsResponse(BaseModel):
 
 
 # ──────────────────────────────────────────────────────────────
-# RAG engine (initialised on startup)
+# RAG engine (lazy-loaded on first request to avoid Render port timeout)
 # ──────────────────────────────────────────────────────────────
-rag_engine: Optional[SupabaseRAGEngine] = None
+rag_engine = None
 
 
-def get_engine() -> SupabaseRAGEngine:
-    """Lazy-load the RAG engine on first request (avoids Render port timeout)."""
+def get_engine():
+    """Lazy-load the RAG engine on first request.
+    
+    The import is deferred here because sentence-transformers / PyTorch
+    take minutes to import on Render's free tier, which would block
+    uvicorn from opening the port in time.
+    """
     global rag_engine
     if rag_engine is None:
-        print("First request — initializing RAG engine...", flush=True)
+        print("First request — importing heavy libraries...", flush=True)
+        from src.rag.supabase_query_engine import SupabaseRAGEngine
+        print("Initializing RAG engine...", flush=True)
         rag_engine = SupabaseRAGEngine()
         print("RAG engine ready!", flush=True)
     return rag_engine
