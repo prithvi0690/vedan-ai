@@ -1,7 +1,6 @@
 import os
 import requests
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
 from google import genai
 
 load_dotenv()
@@ -26,16 +25,14 @@ class SupabaseRAGEngine:
             "Content-Type": "application/json",
         }
 
-        # --- Embedding model (same one used during ingestion) ---
-        print("Loading embedding model (all-MiniLM-L6-v2)...", flush=True)
-        self.embed_model = SentenceTransformer("all-MiniLM-L6-v2")
-
-        # --- Gemini LLM ---
+        # --- Gemini Client ---
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY must be set in .env")
 
         self.client = genai.Client(api_key=api_key)
+        self.embed_model = "gemini-embedding-001"
+        self.embed_dim = 768
         self.model_name = "gemini-2.5-flash"
 
         print("Supabase RAG engine ready!", flush=True)
@@ -45,7 +42,16 @@ class SupabaseRAGEngine:
     # --------------------------------------------------------------------- #
     def _search(self, question: str, k: int = 10) -> list[dict]:
         """Embed the question and call the match_documents RPC."""
-        embedding = self.embed_model.encode(question).tolist()
+        # Use Gemini for embedding
+        try:
+            result = self.client.models.embed_content(
+                model=self.embed_model,
+                contents=question,
+                config={"output_dimensionality": self.embed_dim},
+            )
+            embedding = result.embeddings[0].values
+        except Exception as e:
+            raise RuntimeError(f"Gemini embedding failed: {e}")
 
         payload = {
             "query_embedding": embedding,

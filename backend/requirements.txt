@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 python-dotenv
-sentence-transformers
+
 google-genai
 supabase
 requests
