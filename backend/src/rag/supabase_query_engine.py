@@ -43,6 +43,7 @@ class SupabaseRAGEngine:
     def _search(self, question: str, k: int = 10) -> list[dict]:
         """Embed the question and call the match_documents RPC."""
         # Use Gemini for embedding
+        print(f"[RAG._search] Embedding question with model={self.embed_model}, dim={self.embed_dim}", flush=True)
         try:
             result = self.client.models.embed_content(
                 model=self.embed_model,
@@ -50,7 +51,9 @@ class SupabaseRAGEngine:
                 config={"output_dimensionality": self.embed_dim},
             )
             embedding = result.embeddings[0].values
+            print(f"[RAG._search] Embedding OK, length={len(embedding)}", flush=True)
         except Exception as e:
+            print(f"[RAG._search] Embedding FAILED: {e}", flush=True)
             raise RuntimeError(f"Gemini embedding failed: {e}")
 
         payload = {
@@ -58,6 +61,7 @@ class SupabaseRAGEngine:
             "match_count": k,
         }
 
+        print(f"[RAG._search] Calling Supabase RPC match_documents...", flush=True)
         response = requests.post(
             f"{self.supabase_url}/rest/v1/rpc/match_documents",
             json=payload,
@@ -65,12 +69,16 @@ class SupabaseRAGEngine:
             timeout=30,
         )
 
+        print(f"[RAG._search] RPC status={response.status_code}", flush=True)
         if response.status_code != 200:
+            print(f"[RAG._search] RPC ERROR body: {response.text[:500]}", flush=True)
             raise RuntimeError(
                 f"Supabase RPC error {response.status_code}: {response.text[:300]}"
             )
 
-        return response.json()
+        docs = response.json()
+        print(f"[RAG._search] Got {len(docs)} docs", flush=True)
+        return docs
 
     # --------------------------------------------------------------------- #
     #  Full query pipeline: retrieve → generate → return
@@ -112,11 +120,13 @@ Question: {question}
 
 Answer with citations:"""
 
+        print(f"[RAG.query] Calling Gemini generate_content with model={self.model_name}", flush=True)
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=prompt,
         )
         answer = response.text
+        print(f"[RAG.query] Generation OK, answer length={len(answer)}", flush=True)
 
         # Format sources for the frontend
         sources = []
