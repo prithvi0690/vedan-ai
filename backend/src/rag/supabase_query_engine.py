@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from dotenv import load_dotenv
 from google import genai
@@ -38,12 +39,41 @@ class SupabaseRAGEngine:
         print("Supabase RAG engine ready!", flush=True)
 
     # --------------------------------------------------------------------- #
+    #  Parse metadata from chunk content header
+    # --------------------------------------------------------------------- #
+    @staticmethod
+    def _parse_chunk_metadata(content: str) -> dict:
+        """Extract title and notification_number from the content header.
+
+        Each chunk starts with:
+            Document: <Title>
+            Notification: <NotificationNumber>
+
+            <actual content>
+        """
+        title = "Unknown Document"
+        notification = "N/A"
+        body = content
+
+        lines = content.split("\n", 3)  # split into at most 4 parts
+        for line in lines[:2]:
+            if line.startswith("Document:"):
+                title = line.replace("Document:", "").strip()
+            elif line.startswith("Notification:"):
+                notification = line.replace("Notification:", "").strip()
+
+        # Body is everything after the header (skip title, notification, blank line)
+        if len(lines) > 2:
+            body = lines[-1] if len(lines) == 4 else "\n".join(lines[2:])
+
+        return {"title": title, "notification": notification, "body": body.strip()}
+
+    # --------------------------------------------------------------------- #
     #  Vector search via Supabase RPC
     # --------------------------------------------------------------------- #
     def _search(self, question: str, k: int = 10) -> list[dict]:
         """Embed the question and call the match_documents RPC."""
-        # Use Gemini for embedding
-        print(f"[RAG._search] Embedding question with model={self.embed_model}, dim={self.embed_dim}", flush=True)
+        print(f"[RAG._search] Embedding question with model={self.embed_model}", flush=True)
         try:
             result = self.client.models.embed_content(
                 model=self.embed_model,
@@ -93,32 +123,42 @@ class SupabaseRAGEngine:
                 "sources": [],
             }
 
-        # Build context for Gemini
+        # Build context for Gemini — use parsed metadata for clear citations
         context_parts = []
         for i, doc in enumerate(docs, 1):
-            doc_id = doc.get("document_id", "Unknown")
+            meta = self._parse_chunk_metadata(doc.get("content", ""))
             section = doc.get("section_number", "")
             pages = doc.get("page_numbers", [])
             page_str = ", ".join(str(p) for p in pages) if pages else "N/A"
+
             context_parts.append(
-                f"[Document {i} – ID: {doc_id}, Section: {section}, Pages: {page_str}]\n"
-                f"{doc['content']}\n"
+                f"[Source {i}: \"{meta['title']}\", "
+                f"Notification: {meta['notification']}, "
+                f"Section: {section}, Pages: {page_str}]\n"
+                f"{meta['body']}\n"
             )
 
         context = "\n".join(context_parts)
 
-        prompt = f"""You are **Vedan AI**, an expert assistant on Indian tax law (CGST / GST).
+        prompt = f"""You are **Vedan AI**, an expert assistant specializing in Indian tax law — CGST, SGST, IGST, and GST in general.
 
-Use ONLY the context below to answer the question.
-• Cite every claim with [Source: document_id, Section: X, Page: Y].
-• If the context does not contain enough information, say so clearly.
+You have been provided with relevant excerpts from official CGST notifications, rules, and acts. Use them to answer the user's question.
+
+**Instructions:**
+1. Answer the question thoroughly based on the provided context.
+2. If the context contains relevant information, synthesize it into a clear, well-structured answer.
+3. Cite your sources using the format [Source N] after each relevant statement.
+4. If the context has partial information, share what is available and note what is missing.
+5. If the context truly has no relevant information for the question, say so politely.
+6. Use bullet points, numbered lists, and bold key terms to improve readability.
+7. When discussing sections or rules, mention the specific section/rule numbers.
 
 Context:
 {context}
 
 Question: {question}
 
-Answer with citations:"""
+Answer:"""
 
         print(f"[RAG.query] Calling Gemini generate_content with model={self.model_name}", flush=True)
         response = self.client.models.generate_content(
@@ -128,19 +168,27 @@ Answer with citations:"""
         answer = response.text
         print(f"[RAG.query] Generation OK, answer length={len(answer)}", flush=True)
 
-        # Format sources for the frontend
+        # Build rich sources — deduplicate by title
+        seen_titles = set()
         sources = []
         for doc in docs:
+            meta = self._parse_chunk_metadata(doc.get("content", ""))
+            title = meta["title"]
+
+            if title in seen_titles:
+                continue
+            seen_titles.add(title)
+
             pages = doc.get("page_numbers", [])
+            preview = meta["body"][:200] + "..." if len(meta["body"]) > 200 else meta["body"]
+
             sources.append(
                 {
-                    "source": doc.get("document_id", "Unknown"),
+                    "source": title,
+                    "notification_number": meta["notification"],
+                    "section": doc.get("section_number", ""),
                     "page": pages[0] if pages else 0,
-                    "content": (
-                        doc["content"][:200] + "..."
-                        if len(doc["content"]) > 200
-                        else doc["content"]
-                    ),
+                    "content": preview,
                 }
             )
 

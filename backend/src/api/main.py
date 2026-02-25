@@ -38,7 +38,9 @@ class QueryRequest(BaseModel):
 
 class Source(BaseModel):
     source: str
-    page: int
+    notification_number: Optional[str] = None
+    section: Optional[str] = None
+    page: int = 0
     content: str
 
 
@@ -112,96 +114,21 @@ async def query(request: QueryRequest):
     if not request.question or not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
-    # Step 1: Get engine
     try:
-        print(f"[QUERY] Step 1: Getting engine...", flush=True)
+        print(f"[QUERY] Question: '{request.question[:80]}'", flush=True)
         engine = get_engine()
-        print(f"[QUERY] Step 1: OK", flush=True)
-    except Exception as e:
-        print(f"[QUERY] Step 1 FAILED — engine init error:", flush=True)
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Engine init failed: {str(e)}")
-
-    # Step 2: Search (embedding + Supabase RPC)
-    try:
-        print(f"[QUERY] Step 2: Searching for '{request.question[:50]}'...", flush=True)
-        docs = engine._search(request.question, k=request.k)
-        print(f"[QUERY] Step 2: OK — {len(docs)} docs found", flush=True)
-    except Exception as e:
-        print(f"[QUERY] Step 2 FAILED — search error:", flush=True)
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
-
-    # Step 3: Generate answer with Gemini
-    try:
-        print(f"[QUERY] Step 3: Generating answer...", flush=True)
         result = engine.query(request.question, k=request.k)
-        print(f"[QUERY] Step 3: OK — answer length={len(result['answer'])}", flush=True)
-    except Exception as e:
-        print(f"[QUERY] Step 3 FAILED — generation error:", flush=True)
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
-
-    # Step 4: Build response
-    try:
-        print(f"[QUERY] Step 4: Building response...", flush=True)
-        resp = {
+        print(f"[QUERY] OK — {len(result['sources'])} sources, answer length={len(result['answer'])}", flush=True)
+        return {
             "question": request.question,
             "answer": result["answer"],
             "sources": result["sources"],
         }
-        print(f"[QUERY] Step 4: OK — returning response", flush=True)
-        return resp
     except Exception as e:
-        print(f"[QUERY] Step 4 FAILED — response build error:", flush=True)
+        print(f"[QUERY] FAILED:", flush=True)
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Response build failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
-
-# ──────────────────────────────────────────────────────────────
-# Debug endpoints – REMOVE after fixing the 500 error
-# ──────────────────────────────────────────────────────────────
-@app.get("/debug-models", tags=["Debug"])
-async def debug_models():
-    """List available Gemini models for the configured API key."""
-    try:
-        from google import genai
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            return {"error": "GOOGLE_API_KEY not set"}
-        client = genai.Client(api_key=api_key)
-        models = client.models.list()
-        model_names = [m.name for m in models]
-        return {"models": model_names, "count": len(model_names)}
-    except Exception as e:
-        traceback.print_exc()
-        return {"error": str(e)}
-
-
-@app.get("/debug-search", tags=["Debug"])
-async def debug_search():
-    """Test just the search (embedding + RPC) without generation."""
-    try:
-        engine = get_engine()
-        docs = engine._search("What is GST?", k=2)
-        return {
-            "status": "ok",
-            "doc_count": len(docs),
-            "docs": docs,
-        }
-    except Exception as e:
-        traceback.print_exc()
-        return {"status": "error", "error": str(e)}
-
-
-@app.get("/debug-env", tags=["Debug"])
-async def debug_env():
-    """Check which env vars are set (without revealing values)."""
-    return {
-        "SUPABASE_URL": "SET" if os.getenv("SUPABASE_URL") else "MISSING",
-        "SUPABASE_KEY": "SET" if os.getenv("SUPABASE_KEY") else "MISSING",
-        "GOOGLE_API_KEY": "SET" if os.getenv("GOOGLE_API_KEY") else "MISSING",
-    }
 
 
 # ──────────────────────────────────────────────────────────────

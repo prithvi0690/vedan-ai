@@ -3,6 +3,101 @@ import { useLocation } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+/* ─────────────────── Source Card Component ─────────────────── */
+const SourceCard = ({ source, index }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    return (
+        <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full text-left bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-3 transition-all duration-200 cursor-pointer group"
+        >
+            <div className="flex items-start gap-2">
+                {/* Source number badge */}
+                <span className="flex-shrink-0 bg-primary/10 text-primary text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center mt-0.5">
+                    {index + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                    {/* Title */}
+                    <p className="text-xs font-semibold text-gray-800 truncate">
+                        {source.source}
+                    </p>
+                    {/* Notification + Section */}
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {source.notification_number && source.notification_number !== 'N/A' && (
+                            <span className="text-[10px] text-primary/70 font-medium">
+                                📋 {source.notification_number}
+                            </span>
+                        )}
+                        {source.section && (
+                            <span className="text-[10px] text-gray-500">
+                                §{source.section}
+                            </span>
+                        )}
+                        {source.page > 0 && (
+                            <span className="text-[10px] text-gray-400">
+                                p.{source.page}
+                            </span>
+                        )}
+                    </div>
+                    {/* Expandable preview */}
+                    {expanded && source.content && (
+                        <p className="text-[11px] text-gray-500 mt-2 leading-relaxed border-t border-gray-100 pt-2">
+                            {source.content}
+                        </p>
+                    )}
+                </div>
+                {/* Expand chevron */}
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className={`w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-transform duration-200 flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}
+                >
+                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
+                </svg>
+            </div>
+        </button>
+    );
+};
+
+/* ─────────────────── Sources Section ─────────────────── */
+const SourcesSection = ({ sources }) => {
+    const [showSources, setShowSources] = useState(false);
+
+    if (!sources || sources.length === 0) return null;
+
+    return (
+        <div className="mt-3 pt-2 border-t border-gray-100">
+            <button
+                onClick={() => setShowSources(!showSources)}
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-primary transition-colors cursor-pointer"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h6v6h6v10H6z" />
+                </svg>
+                <span>{sources.length} source{sources.length > 1 ? 's' : ''}</span>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${showSources ? 'rotate-180' : ''}`}
+                >
+                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
+                </svg>
+            </button>
+            {showSources && (
+                <div className="mt-2 space-y-1.5">
+                    {sources.map((src, idx) => (
+                        <SourceCard key={idx} source={src} index={idx} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/* ─────────────────── Chat Page ─────────────────── */
 const Chat = () => {
     const location = useLocation();
     const [messages, setMessages] = useState([]);
@@ -119,7 +214,11 @@ const Chat = () => {
                             </div>
                             <div className={`flex flex-col ${msg.type === 'user' ? 'items-end max-w-[85%] md:max-w-[75%]' : 'items-start max-w-[90%] md:max-w-[85%]'}`}>
                                 <div className={`px-5 py-3.5 rounded-2xl shadow-sm ${msg.type === 'user' ? 'bg-primary text-white rounded-tr-sm' : 'bg-white border border-gray-200 rounded-tl-sm'}`}>
-                                    <p className={`text-sm md:text-base leading-relaxed ${msg.type === 'ai' ? 'text-gray-700' : ''}`}>{msg.text}</p>
+                                    <p className={`text-sm md:text-base leading-relaxed whitespace-pre-wrap ${msg.type === 'ai' ? 'text-gray-700' : ''}`}>{msg.text}</p>
+                                    {/* Sources section for AI messages */}
+                                    {msg.type === 'ai' && msg.sources && (
+                                        <SourcesSection sources={msg.sources} />
+                                    )}
                                 </div>
                                 <span className="text-xs text-gray-400 mt-1 mr-1">{msg.timestamp}</span>
                             </div>
