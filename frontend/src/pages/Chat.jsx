@@ -104,24 +104,18 @@ const Chat = () => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const chatContainerRef = useRef(null);
+    const hasSentInitialQuery = useRef(false);
 
     // If navigated from Home with a query, auto-send it
     useEffect(() => {
-        if (location.state?.query) {
+        if (location.state?.query && !hasSentInitialQuery.current) {
+            hasSentInitialQuery.current = true;
             const query = location.state.query;
             // Clear the state so refreshing doesn't re-send
             window.history.replaceState({}, document.title);
 
-            const userMsg = {
-                id: Date.now(),
-                type: 'user',
-                text: query,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            setMessages([userMsg]);
-
-            // Directly call handleSend with the query
-            handleSend(null, query); // Pass null for event, and the query
+            // handleSend already adds the user message, so no need to add it here
+            handleSend(null, query);
         }
     }, []); // Empty dependency array to run only once on mount
 
