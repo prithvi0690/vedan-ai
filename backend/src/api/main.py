@@ -104,7 +104,7 @@ async def health_check():
 async def get_stats():
     try:
         engine = get_engine()
-        return engine.get_stats()
+        return await engine.get_stats()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
 
@@ -117,7 +117,7 @@ async def query(request: QueryRequest):
     try:
         print(f"[QUERY] Question: '{request.question[:80]}'", flush=True)
         engine = get_engine()
-        result = engine.query(request.question, k=request.k)
+        result = await engine.query(request.question, k=request.k)
         print(f"[QUERY] OK — {len(result['sources'])} sources, answer length={len(result['answer'])}", flush=True)
         return {
             "question": request.question,

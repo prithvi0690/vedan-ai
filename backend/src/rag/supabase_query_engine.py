@@ -1,5 +1,6 @@
 import os
 import re
+import asyncio
 import requests
 from dotenv import load_dotenv
 from google import genai
@@ -71,11 +72,11 @@ class SupabaseRAGEngine:
     # --------------------------------------------------------------------- #
     #  Vector search via Supabase RPC
     # --------------------------------------------------------------------- #
-    def _search(self, question: str, k: int = 10) -> list[dict]:
+    async def _search(self, question: str, k: int = 10) -> list[dict]:
         """Embed the question and call the match_documents RPC."""
         print(f"[RAG._search] Embedding question with model={self.embed_model}", flush=True)
         try:
-            result = self.client.models.embed_content(
+            result = await self.client.aio.models.embed_content(
                 model=self.embed_model,
                 contents=question,
                 config={"output_dimensionality": self.embed_dim},
@@ -92,7 +93,8 @@ class SupabaseRAGEngine:
         }
 
         print(f"[RAG._search] Calling Supabase RPC match_documents...", flush=True)
-        response = requests.post(
+        response = await asyncio.to_thread(
+            requests.post,
             f"{self.supabase_url}/rest/v1/rpc/match_documents",
             json=payload,
             headers=self.headers,
@@ -113,9 +115,9 @@ class SupabaseRAGEngine:
     # --------------------------------------------------------------------- #
     #  Full query pipeline: retrieve → generate → return
     # --------------------------------------------------------------------- #
-    def query(self, question: str, k: int = 10) -> dict:
+    async def query(self, question: str, k: int = 10) -> dict:
         """Run the full RAG pipeline and return answer + sources."""
-        docs = self._search(question, k=k)
+        docs = await self._search(question, k=k)
 
         if not docs:
             return {
@@ -161,7 +163,7 @@ Question: {question}
 Answer:"""
 
         print(f"[RAG.query] Calling Gemini generate_content with model={self.model_name}", flush=True)
-        response = self.client.models.generate_content(
+        response = await self.client.aio.models.generate_content(
             model=self.model_name,
             contents=prompt,
         )
@@ -197,9 +199,10 @@ Answer:"""
     # --------------------------------------------------------------------- #
     #  Stats
     # --------------------------------------------------------------------- #
-    def get_stats(self) -> dict:
+    async def get_stats(self) -> dict:
         """Return a count of rows in document_chunks."""
-        resp = requests.get(
+        resp = await asyncio.to_thread(
+            requests.get,
             f"{self.rest_url}/document_chunks?select=id",
             headers={**self.headers, "Prefer": "count=exact", "Range": "0-0"},
             timeout=10,
