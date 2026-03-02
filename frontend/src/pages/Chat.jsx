@@ -183,7 +183,7 @@ const Chat = () => {
     return (
         <div className="flex flex-col h-full relative bg-gray-50">
             {/* Chat History Container */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth" ref={chatContainerRef}>
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth pb-8" ref={chatContainerRef}>
                 {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 opacity-60">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-16 h-16 mb-4">
@@ -219,18 +219,16 @@ const Chat = () => {
                         </div>
                     ))
                 )}
-                {/* Spacer for bottom input area */}
-                <div className="h-24"></div>
             </div>
 
             {/* Input Area Footer */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gray-50/90 backdrop-blur-md border-t border-gray-200 p-4 md:px-8 md:py-6 z-10">
-                <div className="max-w-4xl mx-auto relative">
+            <div className="flex-shrink-0 bg-gray-50 border-t border-gray-200 p-4 md:px-8 md:py-6 z-10 w-full">
+                <div className="max-w-4xl mx-auto w-full relative">
                     {/* Input Container */}
                     <form onSubmit={handleSend} className="relative bg-white border border-gray-200 rounded-xl shadow-lg focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all duration-200 flex flex-col">
                         {/* Text Area */}
                         <textarea
-                            className="w-full bg-transparent border-0 text-gray-800 placeholder-gray-400 focus:ring-0 resize-none py-3.5 px-4 pr-16 min-h-[56px] max-h-32 focus:outline-none"
+                            className="w-full bg-transparent border-0 text-gray-800 placeholder-gray-400 focus:ring-0 resize-none py-3.5 pl-4 pr-12 min-h-[56px] max-h-32 focus:outline-none"
                             placeholder="Ask a legal question or describe your tax scenario..."
                             rows="1"
                             value={input}
@@ -243,16 +241,7 @@ const Chat = () => {
                             }}
                         ></textarea>
                         {/* Input Actions Toolbar */}
-                        <div className="flex items-center justify-between px-2 pb-2 pt-0">
-                            {/* Left Actions */}
-                            <div className="flex items-center gap-1">
-                                <button type="button" className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-primary hover:bg-primary/5 px-2 py-1.5 rounded-lg transition-colors group">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 group-hover:text-primary">
-                                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15.01l1.41 1.41L11 14.84V19h2v-4.16l1.59 1.59L16 15.01 12.01 11 8 15.01z" />
-                                    </svg>
-                                    <span>Upload PDF</span>
-                                </button>
-                            </div>
+                        <div className="absolute right-2 bottom-2">
                             {/* Send Button */}
                             <button type="submit" className="bg-primary hover:bg-blue-700 text-white rounded-lg p-2 flex items-center justify-center transition-colors shadow-sm shadow-primary/30">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
