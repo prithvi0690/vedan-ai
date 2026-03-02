@@ -41,7 +41,7 @@ const Home = () => {
                         </svg>
                     </div>
                     <input
-                        className="block w-full pl-12 pr-32 py-4 border-2 border-gray-100 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-primary transition-colors text-lg"
+                        className="block w-full pl-12 pr-16 sm:pr-36 py-3 sm:py-4 border-2 border-gray-100 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-primary transition-colors text-base sm:text-lg"
                         placeholder="Ask a question about GST laws..."
                         type="text"
                         value={query}
@@ -50,10 +50,10 @@ const Home = () => {
                     <div className="absolute inset-y-0 right-2 flex items-center">
                         <button
                             type="submit"
-                            className="bg-primary hover:bg-blue-700 text-white font-medium py-2 px-6 rounded shadow-md transition-colors flex items-center gap-2"
+                            className="bg-primary hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-3 sm:px-6 rounded shadow-md transition-colors flex items-center gap-2"
                         >
-                            <span>Ask Vedan</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                            <span className="hidden sm:inline">Ask Vedan</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                                 <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
                             </svg>
                         </button>
