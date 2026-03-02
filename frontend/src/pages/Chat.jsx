@@ -183,9 +183,9 @@ const Chat = () => {
     return (
         <div className="flex flex-col h-full relative bg-gray-50">
             {/* Chat History Container */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth" ref={chatContainerRef}>
+            <div className={`flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth ${messages.length === 0 ? 'flex' : 'space-y-8'}`} ref={chatContainerRef}>
                 {messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400 opacity-60">
+                    <div className="flex-1 flex flex-col items-center justify-center h-full text-gray-400 opacity-60">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-16 h-16 mb-4">
                             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
                         </svg>
