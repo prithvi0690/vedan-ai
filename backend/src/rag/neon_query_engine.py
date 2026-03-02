@@ -1,5 +1,6 @@
 import os
 import re
+import asyncio
 import psycopg2
 from dotenv import load_dotenv
 from google import genai
@@ -73,11 +74,11 @@ class NeonRAGEngine:
     # --------------------------------------------------------------------- #
     #  Vector search via Neon PostgreSQL
     # --------------------------------------------------------------------- #
-    def _search(self, question: str, k: int = 10) -> list[dict]:
+    async def _search(self, question: str, k: int = 10) -> list[dict]:
         """Embed the question and call the match_documents function."""
         print(f"[RAG._search] Embedding question with model={self.embed_model}", flush=True)
         try:
-            result = self.client.models.embed_content(
+            result = await self.client.aio.models.embed_content(
                 model=self.embed_model,
                 contents=question,
                 config={"output_dimensionality": self.embed_dim},
@@ -89,18 +90,23 @@ class NeonRAGEngine:
             raise RuntimeError(f"Gemini embedding failed: {e}")
 
         print(f"[RAG._search] Querying Neon match_documents...", flush=True)
-        conn = self._get_conn()
-        try:
-            cur = conn.cursor()
-            cur.execute(
-                "SELECT * FROM match_documents(%s::vector, %s)",
-                (str(embedding), k),
-            )
-            columns = [desc[0] for desc in cur.description]
-            rows = cur.fetchall()
-            cur.close()
-        finally:
-            conn.close()
+
+        def _db_query():
+            conn = self._get_conn()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT * FROM match_documents(%s::vector, %s)",
+                    (str(embedding), k),
+                )
+                columns = [desc[0] for desc in cur.description]
+                rows = cur.fetchall()
+                cur.close()
+                return columns, rows
+            finally:
+                conn.close()
+
+        columns, rows = await asyncio.to_thread(_db_query)
 
         docs = []
         for row in rows:
@@ -116,9 +122,9 @@ class NeonRAGEngine:
     # --------------------------------------------------------------------- #
     #  Full query pipeline: retrieve → generate → return
     # --------------------------------------------------------------------- #
-    def query(self, question: str, k: int = 10) -> dict:
+    async def query(self, question: str, k: int = 10) -> dict:
         """Run the full RAG pipeline and return answer + sources."""
-        docs = self._search(question, k=k)
+        docs = await self._search(question, k=k)
 
         if not docs:
             return {
@@ -164,7 +170,7 @@ Question: {question}
 Answer:"""
 
         print(f"[RAG.query] Calling Gemini generate_content with model={self.model_name}", flush=True)
-        response = self.client.models.generate_content(
+        response = await self.client.aio.models.generate_content(
             model=self.model_name,
             contents=prompt,
         )
@@ -200,14 +206,18 @@ Answer:"""
     # --------------------------------------------------------------------- #
     #  Stats
     # --------------------------------------------------------------------- #
-    def get_stats(self) -> dict:
+    async def get_stats(self) -> dict:
         """Return a count of rows in document_chunks."""
-        conn = self._get_conn()
-        try:
-            cur = conn.cursor()
-            cur.execute("SELECT COUNT(*) FROM document_chunks")
-            total = cur.fetchone()[0]
-            cur.close()
-        finally:
-            conn.close()
+        def _db_query():
+            conn = self._get_conn()
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT COUNT(*) FROM document_chunks")
+                total = cur.fetchone()[0]
+                cur.close()
+                return total
+            finally:
+                conn.close()
+
+        total = await asyncio.to_thread(_db_query)
         return {"total_documents": total, "database": "neon"}

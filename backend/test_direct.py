@@ -23,28 +23,33 @@ except Exception:
     traceback.print_exc()
     sys.exit(1)
 
-print("=" * 60, flush=True)
-print("STEP 3: Testing _search('What is GST?')...", flush=True)
-try:
-    docs = engine._search("What is GST?", k=3)
-    print(f"  OK — Got {len(docs)} docs", flush=True)
-    if docs:
-        print(f"  First doc keys: {list(docs[0].keys())}", flush=True)
-        print(f"  First doc content[:100]: {docs[0].get('content', '')[:100]}", flush=True)
-except Exception:
-    traceback.print_exc()
-    sys.exit(1)
+import asyncio
 
-print("=" * 60, flush=True)
-print("STEP 4: Testing full query('What is GST?')...", flush=True)
-try:
-    result = engine.query("What is GST?", k=3)
-    print(f"  OK — Answer length: {len(result['answer'])}", flush=True)
-    print(f"  Sources: {len(result['sources'])}", flush=True)
-    print(f"  Answer preview: {result['answer'][:200]}", flush=True)
-except Exception:
-    traceback.print_exc()
-    sys.exit(1)
+async def main():
+    print("=" * 60, flush=True)
+    print("STEP 3: Testing _search('What is GST?')...", flush=True)
+    try:
+        docs = await engine._search("What is GST?", k=3)
+        print(f"  OK — Got {len(docs)} docs", flush=True)
+        if docs:
+            print(f"  First doc keys: {list(docs[0].keys())}", flush=True)
+            print(f"  First doc content[:100]: {docs[0].get('content', '')[:100]}", flush=True)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
 
-print("=" * 60, flush=True)
-print("ALL STEPS PASSED!", flush=True)
+    print("=" * 60, flush=True)
+    print("STEP 4: Testing full query('What is GST?')...", flush=True)
+    try:
+        result = await engine.query("What is GST?", k=3)
+        print(f"  OK — Answer length: {len(result['answer'])}", flush=True)
+        print(f"  Sources: {len(result['sources'])}", flush=True)
+        print(f"  Answer preview: {result['answer'][:200]}", flush=True)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
+
+    print("=" * 60, flush=True)
+    print("ALL STEPS PASSED!", flush=True)
+
+asyncio.run(main())
