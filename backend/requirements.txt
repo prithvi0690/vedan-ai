@@ -3,5 +3,4 @@ uvicorn
 python-dotenv
 
 google-genai
-supabase
-requests
+psycopg2-binary

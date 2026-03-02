@@ -76,9 +76,9 @@ def get_engine():
     global rag_engine
     if rag_engine is None:
         print("First request — importing heavy libraries...", flush=True)
-        from src.rag.supabase_query_engine import SupabaseRAGEngine
+        from src.rag.neon_query_engine import NeonRAGEngine
         print("Initializing RAG engine...", flush=True)
-        rag_engine = SupabaseRAGEngine()
+        rag_engine = NeonRAGEngine()
         print("RAG engine ready!", flush=True)
     return rag_engine
 

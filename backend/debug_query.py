@@ -6,12 +6,12 @@ sys.path.insert(0, os.getcwd())
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.rag.supabase_query_engine import SupabaseRAGEngine
+from src.rag.neon_query_engine import NeonRAGEngine
 
 print("Starting debug script...", flush=True)
 try:
     print("Initializing Engine...", flush=True)
-    engine = SupabaseRAGEngine()
+    engine = NeonRAGEngine()
     print("Engine initialized. Running query...", flush=True)
     result = engine.query("What is GST?")
     print("Query success!")

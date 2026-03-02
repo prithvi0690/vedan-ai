@@ -1,21 +1,25 @@
+"""
+Reseed the Neon PostgreSQL database from the local full_backup.json file.
+
+Usage:
+    python scripts/reseed_database.py
+"""
+
 import os
 import json
-import time
+import psycopg2
 from dotenv import load_dotenv
-from supabase import create_client, Client
 from tqdm import tqdm
 
 load_dotenv("backend/.env")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("Error: SUPABASE_URL or SUPABASE_KEY not set.")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    print("Error: DATABASE_URL not set in backend/.env")
     exit(1)
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 BACKUP_FILE = "full_backup.json"
+
 
 def reseed_database():
     if not os.path.exists(BACKUP_FILE):
@@ -25,47 +29,56 @@ def reseed_database():
     print(f"Loading backup from {BACKUP_FILE}...")
     with open(BACKUP_FILE, "r", encoding="utf-8") as f:
         chunks = json.load(f)
-    
+
     total_chunks = len(chunks)
     print(f"Loaded {total_chunks} chunks.")
 
-    # Confirmation
     print("\nWARNING: This process will re-upload data to 'document_chunks'.")
     truncated = input("Did you already TRUNCATE the table manually? (yes/no): ").lower()
+
+    conn = psycopg2.connect(DATABASE_URL)
+    cur = conn.cursor()
 
     if truncated == "yes":
         print("Skipping deletion step. Proceeding to upload...")
     else:
-        print("Attempting to delete existing data (this might fail if too many rows)...")
-        # Deleting in batches of IDs to be safe
-        ids_to_delete = [c['id'] for c in chunks]
-        
-        # Limit delete batch size - reduce to 200 to avoid URL length limits
-        DELETE_BATCH_SIZE = 200
-        for i in range(0, len(ids_to_delete), DELETE_BATCH_SIZE):
-            batch_ids = ids_to_delete[i:i + DELETE_BATCH_SIZE]
-            print(f"Deleting batch {i}-{i+len(batch_ids)}...")
-            try:
-                supabase.table("document_chunks").delete().in_("id", batch_ids).execute()
-            except Exception as e:
-                print(f"Delete failed: {e}. continuing...")
-        
-        print("Deletion/Check complete. Starting re-upload...")
+        print("Deleting existing data...")
+        cur.execute("DELETE FROM document_chunks")
+        conn.commit()
+        print("Deletion complete. Starting re-upload...")
 
-    # 2. Re-upload
+    # Re-upload in batches
     BATCH_SIZE = 100
     for i in tqdm(range(0, total_chunks, BATCH_SIZE), desc="Uploading Chunks"):
-        batch = chunks[i:i + BATCH_SIZE]
-        try:
-            supabase.table("document_chunks").insert(batch).execute()
-            time.sleep(0.1) 
-        except Exception as e:
-            print(f"\nError uploading batch {i}: {e}")
-            # Try continue? or stop?
-            # Stop is safer
-            exit(1)
+        batch = chunks[i : i + BATCH_SIZE]
+        for chunk in batch:
+            embedding = chunk.get("embedding")
+            page_numbers = chunk.get("page_numbers", [])
 
+            cur.execute(
+                """INSERT INTO document_chunks
+                   (id, document_id, chunk_index, total_chunks, section_number,
+                    content, embedding, tokens, page_numbers, created_at)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s::vector, %s, %s, %s)""",
+                (
+                    chunk["id"],
+                    chunk.get("document_id"),
+                    chunk.get("chunk_index"),
+                    chunk.get("total_chunks"),
+                    chunk.get("section_number"),
+                    chunk.get("content"),
+                    str(embedding) if embedding else None,
+                    chunk.get("tokens"),
+                    page_numbers if page_numbers else [],
+                    chunk.get("created_at"),
+                ),
+            )
+        conn.commit()
+
+    cur.close()
+    conn.close()
     print("\nReseed Complete! Database should be clean and consistent now.")
+
 
 if __name__ == "__main__":
     reseed_database()

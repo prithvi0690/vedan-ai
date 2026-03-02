@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 print("=" * 60, flush=True)
-print("STEP 1: Importing SupabaseRAGEngine...", flush=True)
+print("STEP 1: Importing NeonRAGEngine...", flush=True)
 try:
-    from src.rag.supabase_query_engine import SupabaseRAGEngine
+    from src.rag.neon_query_engine import NeonRAGEngine
     print("  OK", flush=True)
 except Exception:
     traceback.print_exc()
@@ -17,7 +17,7 @@ except Exception:
 print("=" * 60, flush=True)
 print("STEP 2: Creating engine instance...", flush=True)
 try:
-    engine = SupabaseRAGEngine()
+    engine = NeonRAGEngine()
     print("  OK", flush=True)
 except Exception:
     traceback.print_exc()
