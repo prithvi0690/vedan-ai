@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import os, sys, traceback
 from dotenv import load_dotenv
@@ -33,7 +33,7 @@ app.add_middleware(
 # ──────────────────────────────────────────────────────────────
 class QueryRequest(BaseModel):
     question: str
-    k: Optional[int] = 10
+    k: Optional[int] = Field(default=10, ge=1, le=20)
 
 
 class Source(BaseModel):
