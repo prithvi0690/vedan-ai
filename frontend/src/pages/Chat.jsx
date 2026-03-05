@@ -123,9 +123,12 @@ const Chat = () => {
         }
     }, []); // Empty dependency array to run only once on mount
 
-    // Auto-scroll to bottom when messages change
+    // Scroll to bottom when messages change or loading state changes
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const timeoutId = setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+        return () => clearTimeout(timeoutId);
     }, [messages, isLoading]);
 
     const handleSend = async (e, initialQuery = null) => {
