@@ -4,6 +4,27 @@ import ReactMarkdown from 'react-markdown';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+/* ─────────────────── Helper Functions ─────────────────── */
+const formatSourceName = (filename) => {
+    if (!filename) return 'Unknown Document';
+
+    // Exact mapping for known high-profile documents
+    const knownDocs = {
+        'UNKNOWN-General-2017-04-12': 'CGST Act 2017',
+        'UNKNOWN-General-2017-06-28': 'CGST Rules 2017'
+    };
+
+    if (knownDocs[filename]) {
+        return knownDocs[filename];
+    }
+
+    // Fallback cleanup for other parsed filenames
+    return filename
+        .replace(/^UNKNOWN-General-/, '') // Remove prefix
+        .replace(/-/g, ' ')               // Replace dashes with spaces
+        .replace(/(\d{4}) (\d{2}) (\d{2})/, '$1-$2-$3'); // Restore YYYY-MM-DD date format
+};
+
 /* ─────────────────── Source Card Component ─────────────────── */
 const SourceCard = ({ source, index }) => {
     const [expanded, setExpanded] = useState(true);
@@ -21,8 +42,8 @@ const SourceCard = ({ source, index }) => {
                     </span>
                     <div className="flex-1 min-w-0">
                         {/* Title */}
-                        <p className="text-xs font-semibold text-gray-800 truncate">
-                            {source.source}
+                        <p className="text-xs font-semibold text-gray-800 truncate" title={source.source}>
+                            {formatSourceName(source.source)}
                         </p>
                         {/* Notification + Section */}
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
