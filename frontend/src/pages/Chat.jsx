@@ -123,10 +123,14 @@ const Chat = () => {
         }
     }, []); // Empty dependency array to run only once on mount
 
-    // Scroll to bottom when messages change or loading state changes
+    // Scroll to top for first messages, scroll to bottom for subsequent messages
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            if (messages.length <= 2) {
+                chatContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }
         }, 100);
         return () => clearTimeout(timeoutId);
     }, [messages, isLoading]);
@@ -186,9 +190,9 @@ const Chat = () => {
     };
 
     return (
-        <div className="chat-layout flex flex-col h-[100dvh] bg-gray-50 overflow-hidden">
+        <div className="chat-layout flex flex-col h-full bg-gray-50 overflow-hidden">
             {/* Chat History Container */}
-            <div className="message-list flex-1 overflow-y-auto overscroll-contain p-4 md:p-8 space-y-8" ref={chatContainerRef}>
+            <div className="message-list flex-1 overflow-y-auto overscroll-contain p-4 md:p-8 pt-8 md:pt-12 space-y-8" ref={chatContainerRef}>
                 {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-6">
                         <div className="flex flex-col items-center opacity-60">
@@ -289,7 +293,7 @@ const Chat = () => {
 
             {/* Input Area Footer */}
             <div className="input-bar flex-shrink-0 bg-gray-50/90 backdrop-blur-md border-t border-gray-200/50 p-4 md:px-8 md:py-6 z-10 sticky bottom-0"
-                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 32px)' }}>
                 <div className="max-w-4xl mx-auto relative">
                     {/* Input Container */}
                     <form onSubmit={handleSend} className={`relative bg-white border border-gray-200 rounded-xl shadow-lg transition-all duration-200 flex flex-col ${isLoading ? 'opacity-80' : 'focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary'}`}>
